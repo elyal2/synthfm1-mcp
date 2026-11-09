@@ -61,7 +61,9 @@ Plays a `.mid` file live (the computer is the sequencer) to any MIDI output port
 - You map each track of the file to a MIDI channel; the synth decides what each channel plays.
 - `loop`, `fromBeat` and `maxBeats` let you repeat or skip parts.
 - On macOS, connect Bluetooth MIDI first: *Audio MIDI Setup → Window → Show MIDI Studio → Bluetooth*, then use a port-name substring such as `FM-1_BLE`.
-- Tested over Bluetooth with Groove OS 2.0. Felucca and SLOOP never enable the radio, so for them use USB (or a Bluetooth-MIDI-to-TRS adapter).
+- Tested over Bluetooth LE MIDI on an FM-1 running M-VAVE's stock firmware V15 (it shows up as `FM-1_BLE Bluetooth`). Groove OS advertises Bluetooth MIDI too but is untested here.
+- Felucca and SLOOP never enable the radio, so for them use USB (or a Bluetooth-MIDI-to-TRS adapter).
+- The stock firmware plays **one preset at a time on every channel**, so mapping several tracks to several channels just layers them on the same sound; use one track (or `program_change`) there. Firmware with one sound per track (Felucca, SLOOP, Groove OS) is where multi-channel mapping shines.
 
 ```bash
 cd packages/fm1-midi-mcp && npm install && npm run typecheck
