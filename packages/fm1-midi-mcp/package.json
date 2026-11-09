@@ -1,0 +1,30 @@
+{
+  "name": "fm1-midi-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Firmware-agnostic MCP server for any MIDI synth (written for the M-VAVE FM-1): play a .mid file live over any MIDI port, USB or Bluetooth, plus program change and CC. Notes only, no SysEx.",
+  "type": "module",
+  "bin": {
+    "fm1-midi-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "midi": "^2.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0"
+  },
+  "allowScripts": {
+    "midi@2.0.0": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
+  },
+  "license": "MIT"
+}

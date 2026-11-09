@@ -10,8 +10,9 @@
 |---|---|---|
 | [`packages/felucca-mcp`](packages/felucca-mcp) | [Felucca](https://github.com/hugelton/Felucca) (GPL-3.0, open source) | Works. Tested on Felucca v1.8.1 |
 | [`packages/baudgirl-mcp`](packages/baudgirl-mcp) | Baud Girl's FM-1+VA (closed source) | Experimental, **disabled by default** (see below) |
+| [`packages/fm1-midi-mcp`](packages/fm1-midi-mcp) | Any firmware (or any MIDI synth) | Works. Notes only, over USB or Bluetooth LE MIDI |
 
-They are independent packages because they talk to different firmware with different protocols.
+The first two are independent because they talk to different firmware with different protocols. `fm1-midi-mcp` is the firmware-agnostic one: it only needs a MIDI input.
 
 ## felucca-mcp
 
@@ -51,6 +52,19 @@ npm run typecheck
     }
   }
 }
+```
+
+## fm1-midi-mcp (any firmware, USB or Bluetooth)
+
+Plays a `.mid` file live (the computer is the sequencer) to any MIDI output port, plus `send_note`, `program_change`, `cc`, `stop_play` and `list_midi_ports`. No SysEx and no replies from the synth are needed, so it works the same over USB and over **Bluetooth LE MIDI**.
+
+- You map each track of the file to a MIDI channel; the synth decides what each channel plays.
+- `loop`, `fromBeat` and `maxBeats` let you repeat or skip parts.
+- On macOS, connect Bluetooth MIDI first: *Audio MIDI Setup → Window → Show MIDI Studio → Bluetooth*, then use a port-name substring such as `FM-1_BLE`.
+- Tested over Bluetooth with Groove OS 2.0. Felucca and SLOOP never enable the radio, so for them use USB (or a Bluetooth-MIDI-to-TRS adapter).
+
+```bash
+cd packages/fm1-midi-mcp && npm install && npm run typecheck
 ```
 
 ## baudgirl-mcp (experimental, opt-in)
