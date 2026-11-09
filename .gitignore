@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+
+# Third-party music and firmware never belong in this repo
+*.mid
+*.midi
+*.syx
+*.fwsc
+*.zip
+backups/
