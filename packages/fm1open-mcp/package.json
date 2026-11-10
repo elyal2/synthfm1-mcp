@@ -1,0 +1,30 @@
+{
+  "name": "fm1open-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Client and scripts for an FM-1 running M-VAVE FM1 Open V14 (m-vave/fm1_open): its project-transfer SysEx over USB or Bluetooth MIDI. Not an MCP server yet.",
+  "type": "module",
+  "scripts": {
+    "probe": "tsx src/probe.mts",
+    "dump": "tsx src/dump.mts",
+    "analyze": "tsx src/analyze.mts",
+    "songs": "tsx src/build-songs.mts",
+    "play-slot": "tsx src/play-slot.mts",
+    "jam": "tsx src/jam.mts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "midi": "^2.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0"
+  },
+  "allowScripts": {
+    "midi@2.0.0": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
+  },
+  "license": "MIT"
+}

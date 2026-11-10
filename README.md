@@ -11,8 +11,9 @@
 | [`packages/felucca-mcp`](packages/felucca-mcp) | [Felucca](https://github.com/hugelton/Felucca) (GPL-3.0, open source) | Works. Tested on Felucca v1.8.1 |
 | [`packages/baudgirl-mcp`](packages/baudgirl-mcp) | Baud Girl's FM-1+VA (closed source) | Experimental, **disabled by default** (see below) |
 | [`packages/fm1-midi-mcp`](packages/fm1-midi-mcp) | Any firmware (or any MIDI synth) | Works. Notes only, over USB or Bluetooth LE MIDI |
+| [`packages/fm1open-mcp`](packages/fm1open-mcp) | [FM1 Open V14](https://github.com/m-vave/fm1_open) (M-VAVE's official open firmware) | Client and scripts, **not an MCP server yet**. Tested on one unit over USB and Bluetooth |
 
-The first two are independent because they talk to different firmware with different protocols. `fm1-midi-mcp` is the firmware-agnostic one: it only needs a MIDI input.
+`felucca-mcp`, `baudgirl-mcp` and `fm1open-mcp` are independent because they talk to different firmware with different protocols. `fm1-midi-mcp` is the firmware-agnostic one: it only needs a MIDI input.
 
 ## felucca-mcp
 
@@ -69,6 +70,26 @@ Plays a `.mid` file live (the computer is the sequencer) to any MIDI output port
 cd packages/fm1-midi-mcp && npm install && npm run typecheck
 ```
 
+## fm1open-mcp (FM1 Open V14, USB or Bluetooth)
+
+FM1 Open V14 has 8 tracks, one MIDI input channel per track, and a documented project-transfer SysEx (`F0 7D 46 4D 02 cmd …`, described in the comment at the top of the firmware's `app/transfer.c`). This package implements that protocol independently, plus the project layout from `app/instrument.h`. It is a TypeScript client with scripts for now; wrapping it as an MCP server is the obvious next step.
+
+| Script (`npm run …`) | What it does |
+|---|---|
+| `probe <port>` | Read-only: device info, capabilities, the 16 slot names, and a backup of the working project into `backups/` |
+| `dump <port>` | Read-only: every track's steps and the 128 DX7 library voice names |
+| `analyze <file.mid>` | Note counts per 4-bar window and MIDI track, to choose sections |
+| `songs <template.bin> [--write <port>] [--only 0,1]` | Converts MIDI sections into project slots (steps, ties, gates, 808 pad masks, DX7 voice from the library). Without `--write` it only prints |
+| `play-slot <port> <slot>` | Loads a stored slot and runs it with MIDI Start/Stop |
+| `jam <port> <slot>` | Loops a slot on the synth's own clock and plays a generated lead on a free track over MIDI |
+
+The song definitions in `build-songs.mts` are examples that expect your own `.mid` files in `~/Documents/FM-1-midi-examples/`; none are included.
+
+- Ports show up as `FM1 Community` over USB and `FM1 Community_BLE Bluetooth` over Bluetooth; any substring works (`BLE`). Reading the whole 4 KB project takes about 4 s over Bluetooth.
+- `write` replaces the **working project** (RAM) and `saveSlot` persists it. Back up first (`probe` does), and keep your own projects in slots you don't use from the device: saving from the synth's panel overwrites a slot silently.
+- The synth's project browser starts in the FACTORY bank; switch it to USER with K1 to reach stored slots.
+- Not verified: how notes, ties and gates sound beyond one listening session, the GM-to-808 drum mapping, and any firmware other than V14.
+
 ## baudgirl-mcp (experimental, opt-in)
 
 Reads/writes patterns (16 x 64 steps, chaining), scans and writes presets, imports MIDI to an 8-Bit preset's lanes, on the Baud Girl FM-1+VA firmware.
@@ -90,7 +111,7 @@ Enabling it means you run third-party proprietary JavaScript in a Node process o
 
 ## How it was built
 
-The Felucca client follows the public protocol document in the Felucca repo (`web/EDITOR_PROTOCOL.md`), implemented independently; no Felucca source is copied here. The Baud Girl side was learned by reading their public web app's behaviour and confirmed on real hardware.
+The Felucca client follows the public protocol document in the Felucca repo (`web/EDITOR_PROTOCOL.md`), implemented independently; no Felucca source is copied here. The FM1 Open client follows the protocol comment and struct definitions in M-VAVE's `fm1_open` repo (GPLv3 with linking exception); only the documented wire format and field layout were used, no source is copied. The Baud Girl side was learned by reading their public web app's behaviour and confirmed on real hardware.
 
 ## License
 
