@@ -1,65 +1,86 @@
 export type MidiNote = { ch: number; track: number; note: number; start: number; dur: number; vel: number };
 
-/** Minimal SMF reader (formats 0/1): note on/off only, times in quarter-note beats. */
-export function parseMidi(buf: Uint8Array): { notes: MidiNote[]; bpm: number | null } {
-  let p = 0;
-  const ascii = (n: number) => String.fromCharCode(...buf.subarray(p, p + n));
-  const u32 = () => ((buf[p++] << 24) | (buf[p++] << 16) | (buf[p++] << 8) | buf[p++]) >>> 0;
-  const u16 = () => (buf[p++] << 8) | buf[p++];
-  const vlq = () => {
+/** Byte cursor. A class (not closures over a mutable local) so parsing is deterministic. */
+class Reader {
+  pos = 0;
+  constructor(readonly buf: Uint8Array) {}
+  u8(): number {
+    return this.buf[this.pos++];
+  }
+  u16(): number {
+    const a = this.u8();
+    const b = this.u8();
+    return (a << 8) | b;
+  }
+  u32(): number {
+    const a = this.u8();
+    const b = this.u8();
+    const c = this.u8();
+    const d = this.u8();
+    return ((a << 24) | (b << 16) | (c << 8) | d) >>> 0;
+  }
+  vlq(): number {
     let v = 0;
     let b: number;
     do {
-      b = buf[p++];
+      b = this.u8();
       v = (v << 7) | (b & 0x7f);
     } while (b & 0x80);
     return v;
-  };
-  if (ascii(4) !== "MThd") throw new Error("not a MIDI file");
-  p += 4;
-  u32();
-  u16();
-  const ntrks = u16();
-  const division = u16();
+  }
+  ascii(n: number): string {
+    let s = "";
+    for (let i = 0; i < n; i++) s += String.fromCharCode(this.buf[this.pos + i]);
+    this.pos += n;
+    return s;
+  }
+}
+
+/** Minimal SMF reader (formats 0/1): note on/off only, times in quarter-note beats. */
+export function parseMidi(buf: Uint8Array): { notes: MidiNote[]; bpm: number | null } {
+  const r = new Reader(buf);
+  if (r.ascii(4) !== "MThd") throw new Error("not a MIDI file");
+  r.pos += 4;
+  r.u16(); // format
+  const ntrks = r.u16();
+  const division = r.u16();
   if (division & 0x8000) throw new Error("SMPTE time division is not supported");
 
   const notes: MidiNote[] = [];
   let bpm: number | null = null;
   for (let t = 0; t < ntrks; t++) {
-    if (ascii(4) !== "MTrk") throw new Error("bad track header");
-    p += 4;
-    const len = u32();
-    const end = p + len;
+    if (r.ascii(4) !== "MTrk") throw new Error("bad track header");
+    const length = r.u32();
+    const end = r.pos + length;
     let tick = 0;
-    let run = 0;
+    let running = 0;
     const on = new Map<number, { tick: number; vel: number }>();
-    while (p < end) {
-      tick += vlq();
-      let s = buf[p];
-      if (s === 0xff) {
-        p++;
-        const type = buf[p++];
-        const len = vlq();
-        if (type === 0x51 && bpm === null) {
-          bpm = Math.round(60000000 / ((buf[p] << 16) | (buf[p + 1] << 8) | buf[p + 2]));
-        }
-        p += len;
+    while (r.pos < end) {
+      tick += r.vlq();
+      const first = buf[r.pos];
+      if (first === 0xff) {
+        r.pos++;
+        const type = r.u8();
+        const n = r.vlq();
+        if (type === 0x51 && bpm === null) bpm = Math.round(60000000 / ((buf[r.pos] << 16) | (buf[r.pos + 1] << 8) | buf[r.pos + 2]));
+        r.pos += n;
         continue;
       }
-      if (s === 0xf0 || s === 0xf7) {
-        p++;
-        p += vlq();
-        run = 0;
+      if (first === 0xf0 || first === 0xf7) {
+        r.pos++;
+        r.pos += r.vlq();
+        running = 0;
         continue;
       }
-      if (s & 0x80) {
-        run = s;
-        p++;
-      } else s = run;
-      const hi = s & 0xf0;
-      const ch = s & 15;
-      const a = buf[p++];
-      const b = hi === 0xc0 || hi === 0xd0 ? 0 : buf[p++];
+      let status = first;
+      if (status & 0x80) {
+        running = status;
+        r.pos++;
+      } else status = running;
+      const hi = status & 0xf0;
+      const ch = status & 15;
+      const a = r.u8();
+      const b = hi === 0xc0 || hi === 0xd0 ? 0 : r.u8();
       const key = ch * 128 + a;
       if (hi === 0x90 && b > 0) on.set(key, { tick, vel: b });
       else if (hi === 0x80 || (hi === 0x90 && b === 0)) {
@@ -70,7 +91,7 @@ export function parseMidi(buf: Uint8Array): { notes: MidiNote[]; bpm: number | n
         }
       }
     }
-    p = end;
+    r.pos = end;
   }
   return { notes: notes.sort((x, y) => x.start - y.start), bpm };
 }
